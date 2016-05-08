@@ -92,6 +92,8 @@ ADDOBJS = $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $(ADDS
 
 DEPS = $(patsubst %.o, %.d, $(OBJS))
 EXISTINGDEPS=$(call filterext, d, $(BUILDDIR)/$(OBJDIR))
+ADDOBJDEPS = $(patsubst %.o, %.d, $(ADDOBJS))
+EXISTINGADDOBJDEPS = $(call filterext, d, $(BUILDDIR)/$(ADDOBJDIR))
 
 TESTOBJS = $(patsubst $(TESTDIR)/%,$(BUILDDIR)/$(TESTOBJDIR)/%.o, $(call extractbasename, $(TESTSRCS)))
 TESTOBJDIRNAMES = $(call getdirectories, $(TESTOBJS))
@@ -135,7 +137,7 @@ ifeq ($(RUN_PREBUILD), 1)
 endif
 	@touch $@
 
-GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS)
+GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS) $(ADDOBJDEPS)
 $(GENOBJS_CONSTRUCT) : | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
 $(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT)
 	@echo "Locating main obj files"
@@ -237,21 +239,24 @@ $(BUILDDIR)/$(TESTOBJDIR)/%.o : $(TESTDIR)/%.$1
 	@echo "Completed compilation of $$<"
 endef
 $(foreach SRCTYPE, $(SRCTYPES), $(eval $(call compile_rule,$(SRCTYPE))))
+
+#Compile additional objects
+define compile_rule_addobjs
+$(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.d, $(basename $(notdir $1))) : $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $1)))
+$(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $1))): $1
+	@echo "Compiling $$<:"
+	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
+endef
+$(foreach ASRC, $(ADDSRC),$(eval $(call compile_rule_addobjs,$(ASRC))))
+
 $(eval include $(EXISTINGDEPS))
 $(eval include $(EXISTINGTESTDEPS))
+$(eval include $(EXISTINGADDOBJDEPS))
 
 $(BUILDDIR)/$(NMDIR)/%.nm : | $(BUILDDIR)/$(OBJDIR)/%.o
 	@echo "Searching for main method in " $(patsubst $(BUILDDIR)/$(NMDIR)/%.nm, $(BUILDDIR)/$(OBJDIR)/%.o, $@)
 	@nm --defined-only --format=sysv $(patsubst $(BUILDDIR)/$(NMDIR)/%.nm, $(BUILDDIR)/$(OBJDIR)/%.o, $@) | cut -f1 -d ' ' | grep -q -x main && touch $(patsubst %.nm, %.o, $@) || :
 	@touch $@
-
-#Compile additional objects
-define compile_rule_addobjs
-$(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $1))): $1
-	@echo "Compiling $$<:"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -c $$< -o $$@
-endef
-$(foreach ASRC, $(ADDSRC),$(eval $(call compile_rule_addobjs,$(ASRC))))
 
 #Compile moc files
 define moc_src_rule
