@@ -18,9 +18,9 @@ GOOGLETEST_LIB = ../googletest/build/libgtest_main.a ../googletest/build/libgtes
 #||BUILD CONFIG||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-#######################
-## Compiler Options ###
-#######################
+######################
+## Compiler Options ##
+######################
 #Compiler
 CC = g++
 
@@ -39,9 +39,9 @@ SRCTYPES = cpp cc c
 #Project header file extensions
 HTYPES = h
 
-########################
-# Project Configuration#
-########################
+###########################
+## Project Configuration ##
+###########################
 
 PROJECT = ProjectTemplate
 
@@ -54,9 +54,9 @@ PREBUILD =
 #Post-Build Scripts
 POSTBUILD = 
 
-##########################
-# Directory Configuration#
-##########################
+############################
+# Directory Configuration ##
+############################
 
 # Project Directories
 SRCDIR = src
@@ -66,9 +66,9 @@ TESTDIR = test
 #Generated Directories
 BUILDDIR = gen
 
-##################################
-# External Dependencies and Paths#
-##################################
+####################################
+# External Dependencies and Paths ##
+####################################
 
 # External Include Directories 
 EXTINC = 
@@ -86,9 +86,9 @@ LINKS =
 #Additional files/folders to clean
 CLEANFILES = 
 
-#########################
-# Unit Test Dependencies#
-#########################
+###########################
+# Unit Test Dependencies ##
+###########################
 
 #Unit testing library
 TESTLIB = $(GOOGLETEST_LIB)
