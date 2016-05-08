@@ -1,7 +1,6 @@
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||BUILD FLAGS||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 BUILD_MOCS = 0
 BUILD_LIB = 1
 BUILD_BIN = 0
@@ -12,7 +11,6 @@ RUN_POSTBUILD = 1
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||EXTERNALS||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 GOOGLETEST_INC = ../googletest/include
 GOOGLETEST_LIB = ../googletest/build/libgtest_main.a ../googletest/build/libgtest.a 
 
@@ -67,7 +65,6 @@ TESTDIR = test
 
 #Generated Directories
 BUILDDIR = gen
-
 
 ##################################
 # External Dependencies and Paths#
