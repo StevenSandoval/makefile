@@ -20,19 +20,45 @@ GOOGLETEST_LIB = ../googletest/build/libgtest_main.a ../googletest/build/libgtes
 #||BUILD CONFIG||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-# Compiler
+#######################
+## Compiler Options ###
+#######################
+#Compiler
 CC = g++
-LG = ar
+
+#Compiler options
 OPTS = -Wall -std=gnu++14 -g
+
+#Static library archiver
+LG = ar
+
+#Static archiver options
 LGOPTS = -r
+
+#Project source file extensions
 SRCTYPES = cpp cc c
+
+#Project header file extensions
 HTYPES = h
 
-# Project Configuration
-PROJECT = Utilities
+########################
+# Project Configuration#
+########################
+
+PROJECT = ProjectTemplate
 
 #Define Flags
 DEFINE =  LINUX
+
+#Pre-Build Scripts
+PREBUILD = 
+
+#Post-Build Scripts
+POSTBUILD = 
+
+##########################
+# Directory Configuration#
+##########################
 
 # Project Directories
 SRCDIR = src
@@ -42,11 +68,15 @@ TESTDIR = test
 #Generated Directories
 BUILDDIR = gen
 
+
+##################################
+# External Dependencies and Paths#
+##################################
+
 # External Include Directories 
 EXTINC = 
-TESTINC = $(GOOGLETEST_INC)
 
-# Libraries
+# External/System Libraries
 LIBDIRS = 
 LIBS   = pthread
 
@@ -55,19 +85,21 @@ ADDSRC =
 
 # External Links
 LINKS = 
-TESTLIB = $(GOOGLETEST_LIB)
-
-#Pre-Build Scripts
-PREBUILD = 
-
-#Post-Build Scripts
-POSTBUILD = 
 
 #Additional files/folders to clean
 CLEANFILES = 
 
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-#||BUILD SCRIPT||#  - DON'T MODIFY ANYTHING BELOW THIS LINE
-#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#########################
+# Unit Test Dependencies#
+#########################
 
+#Unit testing library
+TESTLIB = $(GOOGLETEST_LIB)
+
+#Unit testing library include path
+TESTINC = $(GOOGLETEST_INC)
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#||BUILD SCRIPT||# 
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 include core.mk
