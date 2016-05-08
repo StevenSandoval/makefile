@@ -127,7 +127,7 @@ GENDIRS_CONSTRUCT = $(OBJDIRNAMES) $(DEPDIRNAMES) $(MAINGENDIRS) $(MAINCODEDIRS)
 $(BUILDDIR)/$(FLAGSDIR)/gendirs: | $(GENDIRS_CONSTRUCT)
 	@touch $@
 
-$(BUILDDIR)/$(FLAGSDIR)/pre-build: $(BUILDDIR)/$(FLAGSDIR)/gendirs $(SRCS) $(INCS) $(TESTSRCS) $(TESTINCS)
+$(BUILDDIR)/$(FLAGSDIR)/pre-build: $(BUILDDIR)/$(FLAGSDIR)/gendirs $(SRCS) $(TESTSRCS)
 	@echo "Building" $(PROJECT) "Project"
 ifeq ($(RUN_PREBUILD), 1)
 	@echo "Running pre-build steps"
@@ -150,17 +150,31 @@ $(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT)
 	@echo "Main object files detected: $(MAINOBJFILES)"
 	@touch $@
 
-$(BUILDDIR)/$(FLAGSDIR)/linklibs: $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 ifeq ($(BUILD_LIB), 1)
-	@rm -rf $(BUILDDIR)/$(GENLIB)/lib$(PROJECT).a
-	@echo "Generating static library lib$(PROJECT).a"
-	$(LG) $(LGOPTS) $(BUILDDIR)/$(GENLIB)/static/lib$(PROJECT).a $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
+DYNAMIC_LIBRARY_CONSTRUCT = $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so
+$(DYNAMIC_LIBRARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
+
+$(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so : $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0
+$(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0 :
 	@echo "Generating dynamic library lib$(PROJECT).so"
-	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
+	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $@ $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so
-	@echo "Libraries generated"
+	@echo "Dynamic library generated"
+
+STATIC_LIBRARY_CONSTRUCT = $(BUILDDIR)/$(GENLIB)/static/lib$(PROJECT).a
+$(STATIC_LIBRARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
+$(BUILDDIR)/$(GENLIB)/static/lib$(PROJECT).a :
+	@rm -rf $@
+	@echo "Generating static library lib$(PROJECT).a"
+	$(LG) $(LGOPTS) $@ $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
+	@echo "Static Library generated"
 endif
+
+$(BUILDDIR)/$(FLAGSDIR)/linklibsdynamic: $(DYNAMIC_LIBRARY_CONSTRUCT) $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
+	@touch $@
+	
+$(BUILDDIR)/$(FLAGSDIR)/linklibsstatic: $(STATIC_LIBRARY_CONSTRUCT) $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 	@touch $@
 
 define linkbin
@@ -168,32 +182,37 @@ define linkbin
 	$(CC) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $1 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) -o $(BUILDDIR)/$(BINDIR)/$(PROJECT)$(notdir $(basename $1)) || exit
 endef
 
-$(BUILDDIR)/$(FLAGSDIR)/linkbins: $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
+$(BUILDDIR)/$(FLAGSDIR)/linkbins: $(BUILDDIR)/$(BINDIR) $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 ifeq ($(BUILD_BIN), 1)
 	@echo "Building binaries"
 	@$(foreach obj, $(MAINOBJFILES), $(call linkbin, $(obj)))
 	@echo "Binaries generated"
 endif
 	@touch $@
-	
-$(BUILDDIR)/$(FLAGSDIR)/linktests: $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
+
 ifeq ($(BUILD_TESTS), 1)
+TEST_BINARY_CONSTRUCT = $(BUILDDIR)/test/$(PROJECT)Tester
+$(TEST_BINARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
+$(BUILDDIR)/test/$(PROJECT)Tester :
 	@echo "Generating tests:"
 	$(CC) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(NOTMAINOBJFILES) $(MOCOBJS) $(ADDOBJS) $(TESTOBJS) $(TESTLIB) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) $(I_TESTINCDIRS) -o $(BUILDDIR)/test/$(PROJECT)Tester
 	@echo "Tests generated"
 endif
+
+$(BUILDDIR)/$(FLAGSDIR)/linktests: $(TEST_BINARY_CONSTRUCT) $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 	@touch $@
 	
-$(BUILDDIR)/$(FLAGSDIR)/$(PROJECT): $(BUILDDIR)/$(FLAGSDIR)/linklibs $(BUILDDIR)/$(FLAGSDIR)/linkbins $(BUILDDIR)/$(FLAGSDIR)/linktests | $(BUILDDIR)/$(FLAGSDIR)/pre-build
+$(BUILDDIR)/$(FLAGSDIR)/$(PROJECT): $(BUILDDIR)/$(FLAGSDIR)/linklibsdynamic $(BUILDDIR)/$(FLAGSDIR)/linklibsstatic $(BUILDDIR)/$(FLAGSDIR)/linkbins $(BUILDDIR)/$(FLAGSDIR)/linktests | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 	@touch $@
 	
-$(BUILDDIR)/$(FLAGSDIR)/post-build: $(BUILDDIR)/$(FLAGSDIR)/$(PROJECT) $(BUILDDIR)/$(FLAGSDIR)/linklibs $(BUILDDIR)/$(FLAGSDIR)/genobjs $(BUILDDIR)/$(FLAGSDIR)/pre-build $(BUILDDIR)/$(FLAGSDIR)/gendirs
+$(BUILDDIR)/$(FLAGSDIR)/post-build: $(BUILDDIR)/$(FLAGSDIR)/$(PROJECT) $(BUILDDIR)/$(FLAGSDIR)/linklibsstatic $(BUILDDIR)/$(FLAGSDIR)/linklibsdynamic $(BUILDDIR)/$(FLAGSDIR)/genobjs $(BUILDDIR)/$(FLAGSDIR)/pre-build $(BUILDDIR)/$(FLAGSDIR)/gendirs
 ifeq ($(RUN_POSTBUILD), 1)
 	@echo "Running post-build steps"
 	$(POSTBUILD)
 	@echo "Post-build steps complete"
 endif
 	@echo "Build complete"
+	@touch $(BUILDDIR)/$(FLAGSDIR)/pre-build
 	@touch $@
 
 ### !! MAIN TARGET RULES !! ###
