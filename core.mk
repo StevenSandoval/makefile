@@ -7,14 +7,12 @@
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 OBJDIR = obj
-DEPDIR = dep
 BINDIR = bin
 GENLIB = lib
 FLAGSDIR = flags
 MOCDIR = moc
 ADDOBJDIR = addobj
 TESTOBJDIR = testobj
-TESTDEPDIR = testdep
 NMDIR = nm
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -72,7 +70,6 @@ L_LIBDIRS = $(addprefix -L, $(LIBDIRS))
 l_LINKLIBS = $(addprefix -l, $(LIBS))
 
 DEPS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/$(DEPDIR)/%.d, $(call extractbasename, $(SRCS)))
-DEPDIRNAMES = $(call getdirectories, $(DEPS))
 EXISTINGDEPS=$(call filterext, d, $(BUILDDIR)/$(DEPDIR))
 
 ifeq ($(BUILD_TESTS),1)
@@ -82,10 +79,6 @@ TESTINCS = $(call filterext, $(HTYPES), $(TESTDIR))
 TESTINCDIRNAMES = $(call getdirectories, $(TESTINCS)) $(TESTINC)
 I_TESTINCDIRS = $(addprefix -I, $(TESTINCDIRNAMES))
 endif
-
-TESTDEPS = $(patsubst $(TESTDIR)/%,$(BUILDDIR)/$(TESTDEPDIR)/%.d, $(call extractbasename, $(TESTSRCS)))
-TESTDEPDIRNAMES = $(call getdirectories, $(TESTDEPS))
-EXISTINGTESTDEPS = $(call filterext, d, $(BUILDDIR)/$(TESTDEPDIR))
 
 ifeq ($(BUILD_MOCS),1)
 MOCSRCS = $(patsubst $(INCDIR)/%.h, $(BUILDDIR)/$(MOCDIR)/%.cpp, $(INCS))
@@ -97,8 +90,14 @@ OBJS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/$(OBJDIR)/%.o, $(call extractbasename,
 OBJDIRNAMES = $(call getdirectories, $(OBJS))
 ADDOBJS = $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $(ADDSRC))))
 
+DEPS = $(patsubst %.o, %.d, $(OBJS))
+EXISTINGDEPS=$(call filterext, d, $(BUILDDIR)/$(OBJDIR))
+
 TESTOBJS = $(patsubst $(TESTDIR)/%,$(BUILDDIR)/$(TESTOBJDIR)/%.o, $(call extractbasename, $(TESTSRCS)))
 TESTOBJDIRNAMES = $(call getdirectories, $(TESTOBJS))
+
+TESTDEPS = $(patsubst %.o, %.d, $(TESTOBJS))
+EXISTINGTESTDEPS = $(call filterext, d, $(BUILDDIR)/$(TESTOBJDIR))
 
 NMS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/$(NMDIR)/%.nm, $(call extractbasename, $(SRCS)))
 NMDIRNAMES = $(call getdirectories, $(NMS))
@@ -123,7 +122,7 @@ clean:
 
 ### !! MAIN TARGET TREE !! ###
 
-GENDIRS_CONSTRUCT = $(OBJDIRNAMES) $(DEPDIRNAMES) $(MAINGENDIRS) $(MAINCODEDIRS) $(TESTOBJDIRNAMES) $(TESTDEPDIRNAMES) $(NMDIRNAMES) $(MOCSRCDIRNAMES)
+GENDIRS_CONSTRUCT = $(OBJDIRNAMES) $(MAINGENDIRS) $(MAINCODEDIRS) $(TESTOBJDIRNAMES) $(NMDIRNAMES) $(MOCSRCDIRNAMES)
 $(BUILDDIR)/$(FLAGSDIR)/gendirs: | $(GENDIRS_CONSTRUCT)
 	@touch $@
 
@@ -134,11 +133,6 @@ ifeq ($(RUN_PREBUILD), 1)
 	$(PREBUILD)
 	@echo "Pre-build steps complete"
 endif
-	@touch $@
-
-GENDEPS_CONSTRUCT = $(DEPS) $(TESTDEPS)
-$(GEPDEPS_CONSTRUCT) : | $(BUILDDIR)/$(FLAGSDIR)/pre-build
-$(BUILDDIR)/$(FLAGSDIR)/gendeps: $(GENDEPS_CONSTRUCT)
 	@touch $@
 
 GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS)
@@ -224,32 +218,22 @@ endef
 $(foreach CODEDIR, $(MAINCODEDIRS), $(eval $(call directory_rule,$(CODEDIR))))
 $(foreach GENDIR, $(MAINGENDIRS), $(eval $(call directory_rule,$(GENDIR))))
 $(foreach OBJDIR, $(OBJDIRNAMES), $(eval $(call directory_rule,$(OBJDIR))))
-$(foreach DEPDIR, $(DEPDIRNAMES), $(eval $(call directory_rule,$(DEPDIR))))
 $(foreach NMDIR, $(NMDIRNAMES), $(eval $(call directory_rule,$(NMDIR))))
-$(foreach TESTDEPDIR, $(TESTDEPDIRNAMES), $(eval $(call directory_rule,$(TESTDEPDIR))))
 $(foreach TOBJDIR_F, $(TESTOBJDIRNAMES), $(eval $(call directory_rule,$(TOBJDIR_F))))
 $(foreach MOCSRCDIR_F, $(MOCSRCDIRNAMES), $(eval $(call directory_rule, $(MOCSRCDIR_F))))
 
 #Defines the compilation rule 
 define compile_rule
-$(BUILDDIR)/$(DEPDIR)/%.d : $(SRCDIR)/%.$1 
-	@echo "Generating dependency rule for $$<"
-	$(CC) -MM $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) $$< -MT $$(patsubst $(BUILDDIR)/$(DEPDIR)/%.d, $(BUILDDIR)/$(OBJDIR)/%.o, $$@) -MF $$@
-	@echo "Completed dependency rule generation for $$<"
-	
-$(BUILDDIR)/$(TESTDEPDIR)/%.d : $(TESTDIR)/%.$1 
-	@echo "Generating dependency rule for $$<"
-	@$(CC) -MM $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) $(I_TESTINCDIRS) $$< -MT $$(patsubst $(BUILDDIR)/$(TESTDEPDIR)/%.d, $(BUILDDIR)/$(TESTOBJDIR)/%.o, $$@) -MF $$@
-	@echo "Completed dependency rule generation for $$<"
-
-$(BUILDDIR)/$(OBJDIR)/%.o : $(SRCDIR)/%.$1  $(BUILDDIR)/$(DEPDIR)/%.d
+$(BUILDDIR)/$(OBJDIR)/%.d : $(BUILDDIR)/$(OBJDIR)/%.o
+$(BUILDDIR)/$(OBJDIR)/%.o : $(SRCDIR)/%.$1 
 	@echo "Compiling $$<"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -c $$< -o $$@
+	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
 	@echo "Completed compilation of $$<"
 
-$(BUILDDIR)/$(TESTOBJDIR)/%.o : $(TESTDIR)/%.$1 $(BUILDDIR)/$(TESTDEPDIR)/%.d
+$(BUILDDIR)/$(TESTOBJDIR)/%.d : $(BUILDDIR)/$(TESTOBJDIR)/%.o
+$(BUILDDIR)/$(TESTOBJDIR)/%.o : $(TESTDIR)/%.$1 
 	@echo "Compiling $$<"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_TESTINCDIRS) $(I_EXTINCDIRS) -c $$< -o $$@
+	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_TESTINCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
 	@echo "Completed compilation of $$<"
 endef
 $(foreach SRCTYPE, $(SRCTYPES), $(eval $(call compile_rule,$(SRCTYPE))))
