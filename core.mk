@@ -110,7 +110,7 @@ NMDIRNAMES = $(call getdirectories, $(NMS))
 ### !! PHONY TARGETS !! ###
 
 .PHONY: all
-all:	$(BUILDDIR)/$(FLAGSDIR)/pre-build $(BUILDDIR)/$(FLAGSDIR)/$(PROJECT) $(BUILDDIR)/$(FLAGSDIR)/post-build $(BUILDDIR)/$(FLAGSDIR)/incschanged
+all:	$(BUILDDIR)/$(FLAGSDIR)/pre-build $(BUILDDIR)/$(FLAGSDIR)/$(PROJECT) $(BUILDDIR)/$(FLAGSDIR)/post-build
 
 .PHONY: clean
 clean:
@@ -131,9 +131,6 @@ ifeq ($(RUN_PREBUILD), 1)
 	$(PREBUILD)
 	@echo "Pre-build steps complete"
 endif
-	@touch $@
-	
-$(BUILDDIR)/$(FLAGSDIR)/incschanged: $(INCS) | $(BUILDDIR)/$(FLAGSDIR)/pre-build
 	@touch $@
 
 GENDEPS_CONSTRUCT = $(DEPS) $(TESTDEPS)
