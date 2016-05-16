@@ -54,17 +54,43 @@ extractbasename=$($1) $(sort $(basename $1))
 ####| VARIABLE DEFINITIONS |####
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
+ifeq ($(MAKECMDGOALS),debug)
+BUILD_TYPE=debug
+else ifeq ($(MAKECMDGOALS),release)
+BUILD_TYPE=release
+endif
+
+ifeq ($(BUILD_TYPE),debug)
+EXTRAOPTS=$(DEBUG_OPTS)
+else ifeq ($(BUILD_TYPE),release)
+EXTRAOPTS=$(RELEASE_OPTS)
+endif
+
+BUILDDIR=$(GENDIR)/$(BUILD_TYPE)
+
 # Files and folders
 MAINCODEDIRS=$(SRCDIR) $(INCDIR) $(TESTDIR)
 MAINGENDIRS=$(addprefix $(BUILDDIR)/, $(BINDIR) $(GENLIB)/static $(GENLIB)/dynamic $(FLAGSDIR) $(TESTDIR) $(ADDOBJDIR))
 
 SRCS = $(call filterext, $(SRCTYPES), $(SRCDIR))
 SRCDIRNAMES = $(call getdirectories, $(SRCS))
+
 INCS = $(call filterext, $(HTYPES), $(INCDIR))
 INCDIRNAMES = $(call getdirectories, $(INCS))
-EXTINCS = $(call filterext, $(HTYPES), $(EXTINC))
+ifeq ($(RECURSIVELY_INCLUDE_LOCAL),1)
 I_INCDIRS = $(addprefix -I, $(INCDIRNAMES))
+else
+I_INCDIRS = $(addprefix -I, $(INCDIR))
+endif
+
+EXTINCS = $(call filterext, $(HTYPES), $(EXTINC))
+EXTINCDIRNAMES = $(call getdirectories, $(EXTINCS))
+ifeq ($(RECURSIVELY_INCLUDE_EXTERNAL),1)
+I_EXTINCDIRS = $(addprefix -I, $(EXTINCDIRNAMES))
+else
 I_EXTINCDIRS = $(addprefix -I, $(EXTINC))
+endif
+
 D_DEFINES = $(addprefix -D, $(DEFINE))
 L_LIBDIRS = $(addprefix -L, $(LIBDIRS))
 l_LINKLIBS = $(addprefix -l, $(LIBS))
@@ -113,13 +139,19 @@ NOTMAINOBJFILES=$(filter-out $(MAINOBJFILES), $(OBJS))
 
 ### !! PHONY TARGETS !! ###
 
+.PHONY: release
+release: all
+	
+.PHONY: debug
+debug: all
+
 .PHONY: all
 all:	$(BUILDDIR)/$(FLAGSDIR)/pre-build $(BUILDDIR)/$(FLAGSDIR)/$(PROJECT) $(BUILDDIR)/$(FLAGSDIR)/post-build
 
 .PHONY: clean
 clean:
 	@echo "Cleaning..."
-	rm -rf $(BUILDDIR) $(CLEANFILES)
+	rm -rf $(GENDIR) $(CLEANFILES)
 	@echo "All done"
 
 ### !! MAIN TARGET TREE !! ###
@@ -139,9 +171,9 @@ endif
 
 GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS) $(ADDOBJDEPS)
 $(GENOBJS_CONSTRUCT) : | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
-$(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT)
+$(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT) 
 	@echo "Locating main obj files"
-	$(eval MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(call filterext, o, $(BUILDDIR)/$(NMDIR))))
+	$(eval MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(shell find $(BUILDDIR)/$(NMDIR) -name *.o)))
 	$(eval NOTMAINOBJFILES=$(filter-out $(MAINOBJFILES), $(OBJS)))
 	@echo "Main object files detected: $(MAINOBJFILES)"
 	@touch $@
@@ -229,13 +261,13 @@ define compile_rule
 $(BUILDDIR)/$(OBJDIR)/%.d : $(BUILDDIR)/$(OBJDIR)/%.o
 $(BUILDDIR)/$(OBJDIR)/%.o : $(SRCDIR)/%.$1 
 	@echo "Compiling $$<"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
+	$(CC) $(OPTS) $(EXTRAOPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
 	@echo "Completed compilation of $$<"
 
 $(BUILDDIR)/$(TESTOBJDIR)/%.d : $(BUILDDIR)/$(TESTOBJDIR)/%.o
 $(BUILDDIR)/$(TESTOBJDIR)/%.o : $(TESTDIR)/%.$1 
 	@echo "Compiling $$<"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_TESTINCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
+	$(CC) $(OPTS) $(EXTRAOPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_TESTINCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
 	@echo "Completed compilation of $$<"
 endef
 $(foreach SRCTYPE, $(SRCTYPES), $(eval $(call compile_rule,$(SRCTYPE))))
@@ -245,7 +277,7 @@ define compile_rule_addobjs
 $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.d, $(basename $(notdir $1))) : $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $1)))
 $(patsubst %, $(BUILDDIR)/$(ADDOBJDIR)/%.o, $(basename $(notdir $1))): $1
 	@echo "Compiling $$<:"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
+	$(CC) $(OPTS) $(EXTRAOPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -MP -MMD -c $$< -o $$@
 endef
 $(foreach ASRC, $(ADDSRC),$(eval $(call compile_rule_addobjs,$(ASRC))))
 
@@ -268,4 +300,4 @@ $(foreach HTYPE, $(HTYPES),$(eval $(call moc_src_rule,$(HTYPE))))
 
 $(BUILDDIR)/$(MOCDIR)/%.o : $(BUILDDIR)/$(MOCDIR)/%.cpp
 	@echo "Compiling MOC file $<:"
-	$(CC) $(OPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -c $< -o $@
+	$(CC) $(OPTS) $(EXTRAOPTS) $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $(I_INCDIRS) $(I_EXTINCDIRS) -c $< -o $@

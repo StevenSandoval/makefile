@@ -1,18 +1,30 @@
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||BUILD FLAGS||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+#Generates moc files from headers for QT applications
 BUILD_MOCS = 0
+
+#Generates dynamic (shared object) and static (archive) from non-main objects
 BUILD_LIB = 1
+
+#Generates binary from all objects
 BUILD_BIN = 0
+
+#Generates test application
 BUILD_TESTS = 0
+
+#Runs pre-build scripts
 RUN_PREBUILD = 1
+
+#Runs post-build scripts
 RUN_POSTBUILD = 1
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||EXTERNALS||#
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-GOOGLETEST_INC = ../googletest/include
-GOOGLETEST_LIB = ../googletest/build/libgtest_main.a ../googletest/build/libgtest.a 
+GOOGLETEST_INC = ../../googletest/include
+GOOGLETEST_LIB = ../../googletest/make/gtest-all.o
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||BUILD CONFIG||#
@@ -25,7 +37,9 @@ GOOGLETEST_LIB = ../googletest/build/libgtest_main.a ../googletest/build/libgtes
 CC = g++
 
 #Compiler options
-OPTS = -Wall -std=gnu++14 -g
+OPTS = -Wall -std=c++14 -fPIC
+RELEASE_OPTS = -O2 -O3
+DEBUG_OPTS = -g
 
 #Static library archiver
 LG = ar
@@ -37,7 +51,7 @@ LGOPTS = -r
 SRCTYPES = cpp cc c
 
 #Project header file extensions
-HTYPES = h
+HTYPES = h hpp
 
 ###########################
 ## Project Configuration ##
@@ -64,7 +78,7 @@ INCDIR = inc
 TESTDIR = test
 
 #Generated Directories
-BUILDDIR = gen
+GENDIR = gen
 
 ####################################
 # External Dependencies and Paths ##
@@ -95,6 +109,22 @@ TESTLIB = $(GOOGLETEST_LIB)
 
 #Unit testing library include path
 TESTINC = $(GOOGLETEST_INC)
+
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+#||ADDITIONAL OPTIONS||#
+#>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+# debug - builds with debug options by default (can be manually specified by invoking the debug target)
+# release - builds with release options by default (can be manually specified by invoking the release target)
+BUILD_TYPE = debug
+
+# 0 = Include only INCDIR
+# 1 = Recursively include all directories in INCDIR
+RECURSIVELY_INCLUDE_LOCAL = 0
+
+# 0 = Include only directories listed in EXTINC
+# 1 = Recursively include all directories for each directory specified in extinc
+RECURSIVELY_INCLUDE_EXTERNAL = 0
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 #||BUILD SCRIPT||# 
