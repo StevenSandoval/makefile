@@ -127,17 +127,30 @@ TESTOBJDIRNAMES = $(call getdirectories, $(TESTOBJS))
 TESTDEPS = $(patsubst %.o, %.d, $(TESTOBJS))
 EXISTINGTESTDEPS = $(call filterext, d, $(BUILDDIR)/$(TESTOBJDIR))
 
+ifeq ($(EXPLICIT_MAIN_SOURCE),"")
 NMS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/$(NMDIR)/%.nm, $(call extractbasename, $(SRCS)))
 NMDIRNAMES = $(call getdirectories, $(NMS))
+endif
 
+ifeq ($(EXPLICIT_MAIN_SOURCE),"")
 MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(call filterext, o, $(BUILDDIR)/$(NMDIR)))
+else
+MAINOBJFILES=$(patsubst %, $(BUILDDIR)/$(OBJDIR)/%.o, $(call extractbasename, $(EXPLICIT_MAIN_SOURCE)))
+endif
 NOTMAINOBJFILES=$(filter-out $(MAINOBJFILES), $(OBJS))
+
+ifeq ($(MAIN_OBJECT_IN_LIBRARIES),1)
+ADDITIONAL_LIBRARY_OBJECT_FILES=$(MAINOBJFILES)
+endif
 
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ####| TARGET RULES |####
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 ### !! PHONY TARGETS !! ###
+
+.PHONY: $(PROJECT)
+$(PROJECT): all
 
 .PHONY: release
 release: all
@@ -172,10 +185,15 @@ endif
 GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS) $(ADDOBJDEPS)
 $(GENOBJS_CONSTRUCT) : | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
 $(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT) 
+ifeq ($(EXPLICIT_MAIN_SOURCE),"")
 	@echo "Locating main obj files"
 	$(eval MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(shell find $(BUILDDIR)/$(NMDIR) -name *.o)))
 	$(eval NOTMAINOBJFILES=$(filter-out $(MAINOBJFILES), $(OBJS)))
 	@echo "Main object files detected: $(MAINOBJFILES)"
+endif
+ifeq ($(MAIN_OBJECT_IN_LIBRARIES),1)
+	$(eval ADDITIONAL_LIBRARY_OBJECT_FILES=$(MAINOBJFILES))
+endif
 	@touch $@
 
 ifeq ($(BUILD_LIB), 1)
@@ -185,7 +203,7 @@ $(DYNAMIC_LIBRARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(F
 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so : $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0
 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0 :
 	@echo "Generating dynamic library lib$(PROJECT).so"
-	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $@ $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
+	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $@ $(NOTMAINOBJFILES) $(ADDITIONAL_LIBRARY_OBJECT_FILES) $(ADDOBJS) $(MOCOBJS)
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so
 	@echo "Dynamic library generated"
@@ -195,7 +213,7 @@ $(STATIC_LIBRARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FL
 $(BUILDDIR)/$(GENLIB)/static/lib$(PROJECT).a :
 	@rm -rf $@
 	@echo "Generating static library lib$(PROJECT).a"
-	$(LG) $(LGOPTS) $@ $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS)
+	$(LG) $(LGOPTS) $@ $(NOTMAINOBJFILES) $(ADDITIONAL_LIBRARY_OBJECT_FILES) $(ADDOBJS) $(MOCOBJS)
 	@echo "Static Library generated"
 endif
 
@@ -286,8 +304,10 @@ $(eval include $(EXISTINGTESTDEPS))
 $(eval include $(EXISTINGADDOBJDEPS))
 
 $(BUILDDIR)/$(NMDIR)/%.nm : | $(BUILDDIR)/$(OBJDIR)/%.o
+ifeq ($(PROJECT_CONTAINS_MAIN), 1)
 	@echo "Searching for main method in " $(patsubst $(BUILDDIR)/$(NMDIR)/%.nm, $(BUILDDIR)/$(OBJDIR)/%.o, $@)
 	@nm --defined-only --format=sysv $(patsubst $(BUILDDIR)/$(NMDIR)/%.nm, $(BUILDDIR)/$(OBJDIR)/%.o, $@) | cut -f1 -d ' ' | grep -q -x main && touch $(patsubst %.nm, %.o, $@) || :
+endif
 	@touch $@
 
 #Compile moc files
