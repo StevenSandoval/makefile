@@ -127,12 +127,12 @@ TESTOBJDIRNAMES = $(call getdirectories, $(TESTOBJS))
 TESTDEPS = $(patsubst %.o, %.d, $(TESTOBJS))
 EXISTINGTESTDEPS = $(call filterext, d, $(BUILDDIR)/$(TESTOBJDIR))
 
-ifeq ($(EXPLICIT_MAIN_SOURCE),"")
+ifeq ($(EXPLICIT_MAIN_SOURCE),)
 NMS = $(patsubst $(SRCDIR)/%,$(BUILDDIR)/$(NMDIR)/%.nm, $(call extractbasename, $(SRCS)))
 NMDIRNAMES = $(call getdirectories, $(NMS))
 endif
 
-ifeq ($(EXPLICIT_MAIN_SOURCE),"")
+ifeq ($(EXPLICIT_MAIN_SOURCE),)
 MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(call filterext, o, $(BUILDDIR)/$(NMDIR)))
 else
 MAINOBJFILES=$(patsubst %, $(BUILDDIR)/$(OBJDIR)/%.o, $(call extractbasename, $(EXPLICIT_MAIN_SOURCE)))
@@ -185,7 +185,7 @@ endif
 GENOBJS_CONSTRUCT = $(OBJS) $(MOCOBJS) $(MOCSRCS) $(ADDOBJS) $(TESTOBJS) $(DEPS) $(TESTDEPS) $(NMS) $(ADDOBJDEPS)
 $(GENOBJS_CONSTRUCT) : | $(BUILDDIR)/$(FLAGSDIR)/pre-build 
 $(BUILDDIR)/$(FLAGSDIR)/genobjs: $(GENOBJS_CONSTRUCT) 
-ifeq ($(EXPLICIT_MAIN_SOURCE),"")
+ifeq ($(EXPLICIT_MAIN_SOURCE),)
 	@echo "Locating main obj files"
 	$(eval MAINOBJFILES=$(patsubst $(BUILDDIR)/$(NMDIR)/%, $(BUILDDIR)/$(OBJDIR)/%, $(shell find $(BUILDDIR)/$(NMDIR) -name *.o)))
 	$(eval NOTMAINOBJFILES=$(filter-out $(MAINOBJFILES), $(OBJS)))
