@@ -203,7 +203,7 @@ $(DYNAMIC_LIBRARY_CONSTRUCT) : $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(F
 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so : $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0
 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1.0 :
 	@echo "Generating dynamic library lib$(PROJECT).so"
-	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $@ $(NOTMAINOBJFILES) $(ADDITIONAL_LIBRARY_OBJECT_FILES) $(ADDOBJS) $(MOCOBJS)
+	$(CC) -fPIC $(CFLAGS) $(CPPFLAGS) -shared -Wl,-soname,lib$(PROJECT).so.1 -o $@ $(NOTMAINOBJFILES) $(ADDITIONAL_LIBRARY_OBJECT_FILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) 
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so.1
 	ln -sf lib$(PROJECT).so.1.0 $(BUILDDIR)/$(GENLIB)/dynamic/lib$(PROJECT).so
 	@echo "Dynamic library generated"
