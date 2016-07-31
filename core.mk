@@ -50,6 +50,18 @@ extractfilenames=$($1) $(sort $(notdir $1))
 #Return - List of basenames
 extractbasename=$($1) $(sort $(basename $1))
 
+##Function - getsourcebinaryname
+#Description - Generate the name of the output binary
+#Arg 1 - Source file name
+#Return - Output binary name
+ifeq ($(BINARY_NAMING_CONVENTION),1)
+getbinaryname=$($1) $(PROJECT)
+else ifeq ($(BINARY_NAMING_CONVENTION),2)
+getbinaryname=$($1) $(notdir $(basename $1))
+else
+getbinaryname=$($1) $(PROJECT)$(notdir $(basename $1))
+endif
+
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ####| VARIABLE DEFINITIONS |####
 #>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -224,8 +236,9 @@ $(BUILDDIR)/$(FLAGSDIR)/linklibsstatic: $(STATIC_LIBRARY_CONSTRUCT) $(BUILDDIR)/
 	@touch $@
 
 define linkbin
-	@echo "$(CC) $(OPTS) $(EXTRAOPTS) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $1 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) -o $(BUILDDIR)/$(BINDIR)/$(PROJECT)$(notdir $(basename $1))"
-	$(CC) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $1 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) -o $(BUILDDIR)/$(BINDIR)/$(PROJECT)$(notdir $(basename $1)) || exit
+	$(eval BINNAME_$(notdir $(basename $1))=$(call getbinaryname, $1))
+	@echo "$(CC) $(OPTS) $(EXTRAOPTS) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $1 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) -o $(BUILDDIR)/$(BINDIR)/$(BINNAME_$(notdir $(basename $1)))"
+	$(CC) -Wl,-unresolved-symbols=ignore-in-shared-libs $(D_DEFINES) $(CFLAGS) $(CPPFLAGS) $1 $(NOTMAINOBJFILES) $(ADDOBJS) $(MOCOBJS) $(LINKS) $(L_LIBDIRS) $(l_LINKLIBS) $(I_INCDIRS) $(I_EXTINCDIRS) -o $(BUILDDIR)/$(BINDIR)/$(BINNAME_$(notdir $(basename $1))) || exit
 endef
 
 $(BUILDDIR)/$(FLAGSDIR)/linkbins: $(BUILDDIR)/$(BINDIR) $(BUILDDIR)/$(FLAGSDIR)/genobjs | $(BUILDDIR)/$(FLAGSDIR)/pre-build
