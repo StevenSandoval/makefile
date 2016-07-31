@@ -9,7 +9,7 @@ BUILD_MOCS = 0
 BUILD_LIB = 1
 
 #Generates binary from all objects
-BUILD_BIN = 1
+BUILD_BIN = 0
 
 #Generates test application
 BUILD_TESTS = 0
@@ -56,6 +56,7 @@ HTYPES = h hpp
 ###########################
 
 PROJECT = ProjectTemplate
+VERSION = 1.0
 
 #Define Flags
 DEFINE =  LINUX
